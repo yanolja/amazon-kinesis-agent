@@ -91,11 +91,10 @@ public class AddEC2MetadataConverter implements IDataConverter {
     }
 
     LinkedHashMap<String,Object> dataObj = new LinkedHashMap<>();
-
     dataObj.put("data", dataStr);
 
     // Appending EC2 metadata
-    dataObj.putAll(metadata);
+    dataObj.put("metadata",metadata);
 
     String dataJson = jsonProducer.writeAsString(dataObj) + NEW_LINE;
     return ByteBuffer.wrap(dataJson.getBytes(StandardCharsets.UTF_8));
@@ -119,15 +118,12 @@ public class AddEC2MetadataConverter implements IDataConverter {
                       new Filter().withName("resource-id").withValues(info.getInstanceId())));
       List<TagDescription> tags = result.getTags();
 
-      Map<String, Object> metadataTags = new LinkedHashMap<>();
-
       for (TagDescription tag : tags) {
         String key = tag.getKey();
         if(tagFields.contains(key)) {
-          metadataTags.put(key.toLowerCase(), tag.getValue());
+          metadata.put("tags_" + key.toLowerCase(), tag.getValue());
         }
       }
-      metadata.put("tags", metadataTags);
 
     } catch (Exception ex) {
       LOGGER.warn("Error while updating EC2 metadata - " + ex.getMessage() + ", ignoring");
