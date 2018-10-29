@@ -61,7 +61,7 @@ public class SingleLineDataConverter implements IDataConverter {
             }
         }
         
-        String delimiter = escapeNewLine ? "\\\\n" : "";
+        String delimiter = escapeNewLine ? "\\n" : "";
         String dataRes = StringUtils.join(lines, delimiter) + NEW_LINE;
         return ByteBuffer.wrap(dataRes.getBytes(StandardCharsets.UTF_8));
     }

@@ -14,33 +14,28 @@
 
 package com.amazon.kinesis.streaming.agent.processing.processors;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-import java.util.LinkedHashMap;
-import java.util.Date;
-import java.text.SimpleDateFormat;
-
 import com.amazon.kinesis.streaming.agent.ByteBuffers;
 import com.amazon.kinesis.streaming.agent.config.Configuration;
 import com.amazon.kinesis.streaming.agent.processing.exceptions.DataConversionException;
-import com.amazon.kinesis.streaming.agent.processing.exceptions.LogParsingException;
 import com.amazon.kinesis.streaming.agent.processing.interfaces.IDataConverter;
 import com.amazon.kinesis.streaming.agent.processing.interfaces.IJSONPrinter;
-import com.amazon.kinesis.streaming.agent.processing.interfaces.ILogParser;
 import com.amazon.kinesis.streaming.agent.processing.utils.ProcessingUtilsFactory;
-import com.amazonaws.util.EC2MetadataUtils;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.DescribeTagsRequest;
 import com.amazonaws.services.ec2.model.DescribeTagsResult;
-import com.amazonaws.services.ec2.model.TagDescription;
 import com.amazonaws.services.ec2.model.Filter;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.amazonaws.services.ec2.model.TagDescription;
+import com.amazonaws.util.EC2MetadataUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Parse the log entries from log file, and convert the log entries into JSON.
@@ -61,6 +56,7 @@ public class AddEC2MetadataConverter implements IDataConverter {
   private long metadataTimestamp;
   private long metadataTTL = 1000 * 60 * 60; // Update metadata every hour
 
+  private final List<String> tagFields;
   public AddEC2MetadataConverter(Configuration config) {
     jsonProducer = ProcessingUtilsFactory.getPrinter(config);
 
@@ -73,6 +69,8 @@ public class AddEC2MetadataConverter implements IDataConverter {
      }
     }
 
+    tagFields = config.readList("tagFields", String.class, new ArrayList<String>());
+
     refreshEC2Metadata();
   }
 
@@ -80,7 +78,7 @@ public class AddEC2MetadataConverter implements IDataConverter {
   public ByteBuffer convert(ByteBuffer data) throws DataConversionException {
 
     if ((metadataTimestamp + metadataTTL) < System.currentTimeMillis()) refreshEC2Metadata();
-    
+
     if (metadata == null || metadata.isEmpty()) {
       LOGGER.warn("Unable to append metadata, no metadata found");
       return data;
@@ -88,16 +86,13 @@ public class AddEC2MetadataConverter implements IDataConverter {
 
     String dataStr = ByteBuffers.toString(data, StandardCharsets.UTF_8);
 
-    ObjectMapper mapper = new ObjectMapper();
-    TypeReference<LinkedHashMap<String,Object>> typeRef = 
-      new TypeReference<LinkedHashMap<String,Object>>() {};
-
-    LinkedHashMap<String,Object> dataObj = null;
-    try {
-      dataObj = mapper.readValue(dataStr, typeRef);
-    } catch (Exception ex) {
-      throw new DataConversionException("Error converting json source data to map", ex);
+    if (dataStr.endsWith(NEW_LINE)) {
+      dataStr = dataStr.substring(0, (dataStr.length() - NEW_LINE.length()));
     }
+
+    LinkedHashMap<String,Object> dataObj = new LinkedHashMap<>();
+
+    dataObj.put("data", dataStr);
 
     // Appending EC2 metadata
     dataObj.putAll(metadata);
@@ -117,6 +112,22 @@ public class AddEC2MetadataConverter implements IDataConverter {
       metadata = new LinkedHashMap<String, Object>();
       metadata.put("privateIp", info.getPrivateIp());
       metadata.put("instanceId", info.getInstanceId());
+
+      final AmazonEC2 ec2 = AmazonEC2ClientBuilder.defaultClient();
+      DescribeTagsResult result = ec2.describeTags(
+              new DescribeTagsRequest().withFilters(
+                      new Filter().withName("resource-id").withValues(info.getInstanceId())));
+      List<TagDescription> tags = result.getTags();
+
+      Map<String, Object> metadataTags = new LinkedHashMap<>();
+
+      for (TagDescription tag : tags) {
+        String key = tag.getKey();
+        if(tagFields.contains(key)) {
+          metadataTags.put(key.toLowerCase(), tag.getValue());
+        }
+      }
+      metadata.put("tags", metadataTags);
 
     } catch (Exception ex) {
       LOGGER.warn("Error while updating EC2 metadata - " + ex.getMessage() + ", ignoring");
