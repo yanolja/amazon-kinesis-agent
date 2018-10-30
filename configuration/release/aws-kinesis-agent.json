@@ -1,17 +1,19 @@
 {
-  "cloudwatch.emitMetrics": true,
-  "kinesis.endpoint": "",
-  "firehose.endpoint": "",
-  
-  "flows": [
+  "kinesis.endpoint":"kinesis.ap-northeast-2.amazonaws.com",
+  "cloudwatch.emitMetrics":false,
+  "flows":[
     {
-      "filePattern": "/tmp/app.log*",
-      "kinesisStream": "yourkinesisstream",
-      "partitionKeyOption": "RANDOM"
-    },
-    {
-      "filePattern": "/tmp/app.log*",
-      "deliveryStream": "yourdeliverystream"
+      "filePattern":"/var/log/nginx/access.log",
+      "kinesisStream":"yadi-test-stream",
+      "maxBufferAgeMillis":1000,
+      "partitionKeyOption":"RANDOM",
+      "multiLineStartPattern":"^[^ ]+",
+      "dataProcessingOptions":[
+        {
+          "optionName":"ADDEC2METADATA",
+          "tagFields":["Team", "Service", "Environment","elasticbeanstalk:environment-id", "elasticbeanstalk:environment-name"]
+        }
+      ]
     }
   ]
 }
