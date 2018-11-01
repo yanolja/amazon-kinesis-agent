@@ -53,6 +53,7 @@ public class AddEC2MetadataConverter implements IDataConverter {
   private static final Logger LOGGER = LoggerFactory.getLogger(AddEC2MetadataConverter.class);
   private IJSONPrinter jsonProducer;
   private Map<String, Object> metadata;
+  private String logType;
   private long metadataTimestamp;
   private long metadataTTL = 1000 * 60 * 60; // Update metadata every hour
 
@@ -70,6 +71,7 @@ public class AddEC2MetadataConverter implements IDataConverter {
     }
 
     tagFields = config.readList("tagFields", String.class, new ArrayList<String>());
+    logType = config.readString("logType", null);
 
     refreshEC2Metadata();
   }
@@ -91,6 +93,9 @@ public class AddEC2MetadataConverter implements IDataConverter {
     }
 
     LinkedHashMap<String,Object> dataObj = new LinkedHashMap<>();
+    if(logType != null && !logType.isEmpty()) {
+      dataObj.put("logType", logType);
+    }
     dataObj.put("data", dataStr);
 
     // Appending EC2 metadata
