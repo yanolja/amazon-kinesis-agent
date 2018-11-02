@@ -1,6 +1,7 @@
 {
   "kinesis.endpoint":"kinesis.ap-northeast-2.amazonaws.com",
   "cloudwatch.emitMetrics":false,
+  "log.statusReportingPeriodSeconds": 300,
   "flows":[
     {
       "filePattern":"/var/log/nginx/access.log",
@@ -10,8 +11,54 @@
       "multiLineStartPattern":"^[^ ]+",
       "dataProcessingOptions":[
         {
-          "optionName":"ADDEC2METADATA",
-          "tagFields":["Team", "Service", "Environment","elasticbeanstalk:environment-id", "elasticbeanstalk:environment-name"]
+          "optionName": "ADDEC2METADATA",
+          "tagFields": [
+            "Team",
+            "Service",
+            "Environment",
+            "elasticbeanstalk:environment-id",
+            "elasticbeanstalk:environment-name"
+          ]
+        }
+      ]
+    },
+    {
+      "filePattern": "/var/log/messages",
+      "kinesisStream": "syslog-dev",
+      "maxBufferAgeMillis": 1000,
+      "partitionKeyOption": "RANDOM",
+      "multiLineStartPattern": "^[^ ]+",
+      "dataProcessingOptions": [
+        {
+          "optionName": "ADDEC2METADATA",
+          "logType": "messages",
+          "tagFields": [
+            "Team",
+            "Service",
+            "Environment",
+            "elasticbeanstalk:environment-id",
+            "elasticbeanstalk:environment-name"
+          ]
+        }
+      ]
+    },
+    {
+      "filePattern": "/var/log/secure",
+      "kinesisStream": "syslog-dev",
+      "maxBufferAgeMillis": 1000,
+      "partitionKeyOption": "RANDOM",
+      "multiLineStartPattern": "^[^ ]+",
+      "dataProcessingOptions": [
+        {
+          "optionName": "ADDEC2METADATA",
+          "logType": "secure",
+          "tagFields": [
+            "Team",
+            "Service",
+            "Environment",
+            "elasticbeanstalk:environment-id",
+            "elasticbeanstalk:environment-name"
+          ]
         }
       ]
     }
