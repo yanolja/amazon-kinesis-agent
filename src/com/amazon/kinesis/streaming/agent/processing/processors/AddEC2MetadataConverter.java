@@ -32,10 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Parse the log entries from log file, and convert the log entries into JSON.
@@ -57,6 +54,7 @@ public class AddEC2MetadataConverter implements IDataConverter {
   private long metadataTimestamp;
   private long metadataTTL = 1000 * 60 * 60; // Update metadata every hour
 
+  private final boolean withTzOffset;
   private final List<String> tagFields;
   public AddEC2MetadataConverter(Configuration config) {
     jsonProducer = ProcessingUtilsFactory.getPrinter(config);
@@ -72,7 +70,7 @@ public class AddEC2MetadataConverter implements IDataConverter {
 
     tagFields = config.readList("tagFields", String.class, new ArrayList<String>());
     logType = config.readString("logType", null);
-
+    withTzOffset = config.readBoolean("withTzOffset", false);
     refreshEC2Metadata();
   }
 
@@ -116,6 +114,10 @@ public class AddEC2MetadataConverter implements IDataConverter {
       metadata = new LinkedHashMap<String, Object>();
       metadata.put("privateIp", info.getPrivateIp());
       metadata.put("instanceId", info.getInstanceId());
+
+      if (withTzOffset) {
+        metadata.put("tzOffset", TimeZone.getDefault().getRawOffset());
+      }
 
       final AmazonEC2 ec2 = AmazonEC2ClientBuilder.defaultClient();
       DescribeTagsResult result = ec2.describeTags(
