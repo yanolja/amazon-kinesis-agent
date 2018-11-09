@@ -20,6 +20,7 @@ import com.amazon.kinesis.streaming.agent.processing.exceptions.DataConversionEx
 import com.amazon.kinesis.streaming.agent.processing.interfaces.IDataConverter;
 import com.amazon.kinesis.streaming.agent.processing.interfaces.IJSONPrinter;
 import com.amazon.kinesis.streaming.agent.processing.utils.ProcessingUtilsFactory;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.DescribeTagsRequest;
@@ -119,7 +120,9 @@ public class AddEC2MetadataConverter implements IDataConverter {
         metadata.put("tzOffset", TimeZone.getDefault().getRawOffset());
       }
 
-      final AmazonEC2 ec2 = AmazonEC2ClientBuilder.defaultClient();
+      final AmazonEC2 ec2 = AmazonEC2ClientBuilder.standard()
+              .withRegion(Regions.AP_NORTHEAST_2)
+              .build();
       DescribeTagsResult result = ec2.describeTags(
               new DescribeTagsRequest().withFilters(
                       new Filter().withName("resource-id").withValues(info.getInstanceId())));
