@@ -1,18 +1,22 @@
 {
   "kinesis.endpoint":"kinesis.ap-northeast-2.amazonaws.com",
+  "assumeRoleARN":"arn:aws:iam::122797595191:role/svrlog-kinesis-put-role-prod",
   "cloudwatch.emitMetrics":false,
-  "log.statusReportingPeriodSeconds": 300,
+  "log.statusReportingPeriodSeconds":300,
   "flows":[
     {
-      "filePattern":"/var/log/nginx/access.log",
-      "kinesisStream":"yadi-test-stream",
+      "filePattern":"/var/log/messages",
+      "kinesisStream":"syslog",
       "maxBufferAgeMillis":1000,
       "partitionKeyOption":"RANDOM",
       "multiLineStartPattern":"^[^ ]+",
       "dataProcessingOptions":[
         {
-          "optionName": "ADDEC2METADATA",
-          "tagFields": [
+          "optionName":"ADDEC2METADATA",
+          "logType":"messages",
+          "withTzOffset":true,
+          "metadataTTL":86400,
+          "tagFields":[
             "Team",
             "Service",
             "Environment",
@@ -23,16 +27,18 @@
       ]
     },
     {
-      "filePattern": "/var/log/messages",
-      "kinesisStream": "syslog-dev",
-      "maxBufferAgeMillis": 1000,
-      "partitionKeyOption": "RANDOM",
-      "multiLineStartPattern": "^[^ ]+",
-      "dataProcessingOptions": [
+      "filePattern":"/var/log/secure",
+      "kinesisStream":"syslog",
+      "maxBufferAgeMillis":1000,
+      "partitionKeyOption":"RANDOM",
+      "multiLineStartPattern":"^[^ ]+",
+      "dataProcessingOptions":[
         {
-          "optionName": "ADDEC2METADATA",
-          "logType": "messages",
-          "tagFields": [
+          "optionName":"ADDEC2METADATA",
+          "metadataTTL":86400,
+          "withTzOffset":true,
+          "logType":"secure",
+          "tagFields":[
             "Team",
             "Service",
             "Environment",
@@ -43,16 +49,18 @@
       ]
     },
     {
-      "filePattern": "/var/log/secure",
-      "kinesisStream": "syslog-dev",
-      "maxBufferAgeMillis": 1000,
-      "partitionKeyOption": "RANDOM",
-      "multiLineStartPattern": "^[^ ]+",
-      "dataProcessingOptions": [
+      "filePattern":"/var/log/commands.log",
+      "kinesisStream":"syslog",
+      "maxBufferAgeMillis":1000,
+      "partitionKeyOption":"RANDOM",
+      "multiLineStartPattern":"^[^ ]+",
+      "dataProcessingOptions":[
         {
-          "optionName": "ADDEC2METADATA",
-          "logType": "secure",
-          "tagFields": [
+          "optionName":"ADDEC2METADATA",
+          "metadataTTL":86400,
+          "withTzOffset":true,
+          "logType":"commands",
+          "tagFields":[
             "Team",
             "Service",
             "Environment",
